@@ -20,7 +20,6 @@ jobs:
       matrix:
         include:
           - { os: macos-14, target: aarch64-apple-darwin }
-          - { os: macos-13, target: x86_64-apple-darwin }
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
           - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
     runs-on: ${{ matrix.os }}
@@ -28,13 +27,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
-      - uses: rhysd/action-setup-vim@v1
+      # action-setup-vim hangs on the macOS runners; the tests run on Linux and Windows in ci.yml.
+      - if: runner.os != 'macOS'
+        uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: stable
       - run: rustup target add ${{ matrix.target }}
-      - run: cargo test
-      - run: nvim --headless --noplugin -u NONE -l tests/run.lua
+      - if: runner.os != 'macOS'
+        run: cargo test
+      - if: runner.os != 'macOS'
+        run: nvim --headless --noplugin -u NONE -l tests/run.lua
       - run: cargo build --release --target ${{ matrix.target }}
       - run: cp target/${{ matrix.target }}/release/herdr-nvim herdr-nvim-${{ matrix.target }}
       - uses: softprops/action-gh-release@v2
